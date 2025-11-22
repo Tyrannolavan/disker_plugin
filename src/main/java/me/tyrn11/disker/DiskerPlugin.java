@@ -79,9 +79,10 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
             try {
                 ProcessBuilder pb = new ProcessBuilder(
-                        "ffmpeg",
+                        "ffmpeg", "-y",
                         "-i", mp3File.getAbsolutePath(),
-                        "-q:a", "9",
+                        "-c:a", "libvorbis",
+                        "-q:a", "4",
                         oggFile.getAbsolutePath()
                 );
                 pb.redirectErrorStream(true);
