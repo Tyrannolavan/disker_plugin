@@ -3,6 +3,6 @@ version: 1.0
 main: me.tyrn11.disker.DiskerPlugin
 description: Create custom music discs from YouTube and Spotify links
 commands:
-  musicdisc:
-    description: Create a music disc from a YouTube or Spotify link
-    usage: /musicdisc <URL>
+  disker:
+    description: Create a music disc from a song file
+    usage: /disker <create|list> [songname]
