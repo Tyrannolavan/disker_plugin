@@ -1,11 +1,17 @@
 package me.tyrn11.disker;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.JukeboxInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -16,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
+public class DiskerPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
     private File musicFolder;
     private File resourcePackFolder;
@@ -46,9 +52,11 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
         loadAvailableSongs();
         generateResourcePack();
 
-        if (getCommand("Disker") != null) {
-            getCommand("Disker").setExecutor(this);
+        if (getCommand("disker") != null) {
+            getCommand("disker").setExecutor(this);
         }
+
+        getServer().getPluginManager().registerEvents(this, this);
 
         getLogger().info("Disker loaded with " + availableSongs.size() + " songs ready!");
     }
@@ -79,7 +87,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
             try {
                 ProcessBuilder pb = new ProcessBuilder(
-                        "ffmpeg", "-y",
+                        "/usr/bin/ffmpeg", "-y",
                         "-i", mp3File.getAbsolutePath(),
                         "-c:a", "libvorbis",
                         "-q:a", "4",
@@ -143,7 +151,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
             for (int i = 0; i < availableSongs.size(); i++) {
                 String song = availableSongs.get(i);
-                json.append("  \"record.").append(song).append("\": {\n");
+                json.append("  \"disker.").append(song).append("\": {\n");
                 json.append("    \"sounds\": [\n");
                 json.append("      \"music/discs/").append(song).append("\"\n");
                 json.append("    ]\n");
@@ -166,9 +174,50 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
         }
     }
 
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getInventory() instanceof JukeboxInventory)) {
+            return;
+        }
+
+        ItemStack cursor = event.getCursor();
+        if (cursor == null || cursor.getType() != Material.MUSIC_DISC_5) {
+            return;
+        }
+
+        ItemMeta meta = cursor.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) {
+            return;
+        }
+
+        String songName = meta.getDisplayName().replaceAll("§.", "");
+
+        if (!availableSongs.contains(songName)) {
+            return;
+        }
+
+        Location jukeboxLoc = event.getInventory().getLocation();
+        if (jukeboxLoc == null) {
+            return;
+        }
+
+        getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
+            playMusicToNearby(jukeboxLoc, songName);
+        }, 1L);
+    }
+
+    private void playMusicToNearby(Location loc, String songName) {
+        for (Player player : getServer().getOnlinePlayers()) {
+            if (player.getLocation().distance(loc) <= 50) {
+                player.playSound(loc, "disker." + songName, 1.0f, 1.0f);
+            }
+        }
+        getLogger().info("Playing: " + songName + " at " + loc);
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
-        if (!cmd.getName().equalsIgnoreCase("Disker")) {
+        if (!cmd.getName().equalsIgnoreCase("disker")) {
             return false;
         }
 
@@ -180,7 +229,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
         Player player = (Player) sender;
 
         if (args.length == 0) {
-            player.sendMessage("§cUsage: /Disker <create|list> [songname]");
+            player.sendMessage("§cUsage: /disker <create|list> [songname]");
             return true;
         }
 
@@ -200,7 +249,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
         if (action.equals("create")) {
             if (args.length < 2) {
-                player.sendMessage("§cUsage: /Disker create <songname>");
+                player.sendMessage("§cUsage: /disker create <songname>");
                 return true;
             }
 
@@ -212,7 +261,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
             String finalSongName = songName.toString();
             if (!availableSongs.contains(finalSongName)) {
-                player.sendMessage("§cSong '" + finalSongName + "' not found! Use /Disker list to see available songs.");
+                player.sendMessage("§cSong '" + finalSongName + "' not found! Use /disker list to see available songs.");
                 return true;
             }
 
@@ -235,7 +284,7 @@ public class DiskerPlugin extends JavaPlugin implements CommandExecutor {
 
             List<String> lore = new ArrayList<>();
             lore.add("§7Custom Music Disc");
-            lore.add("§7Play in jukebox!");
+            lore.add("§7Place in jukebox!");
             meta.setLore(lore);
 
             disc.setItemMeta(meta);
