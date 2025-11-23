@@ -1,3 +1,3 @@
 TS is really WIP, so it's also disorganized.  I'll work on that with the next pushes.
 
-Currently the latest plugin.yml (1.3) is in project build something, not resources.  This is very important and I don't know how to fix it :).  help me..
+I also just fixed a couple of issues with v1.3.  The problem was that the plugin.yml in resources was different from that in project build or whatever.  The one there was a classes file, not the actual plugin.yml in resources, so as a result, the plugin jar wouldn't have worked, and the Minecraft command would've been wrong.  Hey, at least now it's fixed!  Right? :/
